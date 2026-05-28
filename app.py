@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from estimator import analyze_plans
 from excel_output import generate_excel
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')
 app.secret_key = os.environ.get("SECRET_KEY", "est4-change-this-in-production")
 
 UPLOAD_FOLDER = "uploads"
