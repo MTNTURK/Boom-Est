@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTN-EST — Construction Cost Estimator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg:        #05070E;
+      --surface:   #0A0F1E;
+      --surface2:  #0F1628;
+      --border:    #1A2540;
+      --border2:   #243050;
+      --blue:      #2B7FFF;
+      --cyan:      #00D4FF;
+      --green:     #00FF88;
+      --blue-dim:  #1A5FCC;
+      --blue-glow: rgba(43,127,255,0.18);
+      --cyan-glow: rgba(0,212,255,0.12);
+      --blue-soft: rgba(43,127,255,0.07);
+      --gray1:     #8898AA;
+      --gray2:     #5A6A7E;
+      --gray3:     #2E3D52;
+      --white:     #F0F4FF;
+      --white-dim: rgba(240,244,255,0.6);
+      --red:       #FF3D3D;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── ANIMATED GRID BACKGROUND ── */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(43,127,255,0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(43,127,255,0.028) 1px, transparent 1px);
+      background-size: 64px 64px;
+      pointer-events: none;
+    }
+    .bg-glow-top {
+      position: fixed; top: -180px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 700px;
+      background: radial-gradient(ellipse, rgba(43,127,255,0.09) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+    .bg-glow-br {
+      position: fixed; bottom: -15%; right: -10%;
+      width: 600px; height: 600px;
+      background: radial-gradient(ellipse, rgba(0,212,255,0.05) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* All content sits above bg */
+    header, .page-body, footer { position: relative; z-index: 1; }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(5,7,14,0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--cyan) 40%, var(--blue) 60%, transparent 100%);
+      opacity: 0.25;
+    }
+
+    .logo-wrap { display: flex; flex-direction: column; gap: 2px; }
+    .logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 21px; font-weight: 800;
+      letter-spacing: 4px; color: var(--white);
+      text-transform: uppercase;
+    }
+    .logo em { font-style: normal; color: var(--cyan); }
+    .logo-sub {
+      font-size: 9px; letter-spacing: 3px;
+      color: var(--gray2); font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .header-right { display: flex; align-items: center; gap: 18px; }
+
+    .live-badge {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--cyan); text-transform: uppercase;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      animation: livepulse 2s ease-in-out infinite;
+    }
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--cyan); }
+      50%       { opacity: 0.3; box-shadow: 0 0 4px var(--cyan); }
+    }
+
+    /* Pricing popover */
+    .pricing-trigger { position: relative; }
+    .pricing-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--gray1);
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      padding: 8px 18px; border-radius: 20px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: all 0.2s; text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pricing-btn:hover {
+      background: var(--border); color: var(--white);
+      border-color: var(--blue);
+      box-shadow: 0 0 18px rgba(43,127,255,0.14);
+    }
+    .pricing-panel {
+      display: none;
+      position: absolute; top: calc(100% + 12px); right: 0;
+      width: 260px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 16px; padding: 8px 0;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,212,255,0.08), 0 0 40px rgba(0,212,255,0.04);
+      z-index: 300;
+    }
+    .pricing-panel.open { display: block; }
+    .pricing-panel-header {
+      padding: 12px 20px 10px;
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      color: var(--gray2); text-transform: uppercase;
+      border-bottom: 1px solid var(--border); margin-bottom: 4px;
+    }
+    .pricing-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; transition: background 0.15s;
+    }
+    .pricing-row:hover { background: rgba(43,127,255,0.05); }
+    .pricing-row .tier { font-size: 13px; font-weight: 500; color: var(--white-dim); }
+    .pricing-row .price { font-size: 13px; font-weight: 700; color: var(--blue); }
+    .pricing-row .price.free { color: var(--green); }
+    .pricing-row .price.member { color: #A78BFA; }
+    .pricing-row.sep { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 12px; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 96px 24px 72px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    /* Scanning beam */
+    .hero::after {
+      content: '';
+      position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(43,127,255,0.035), transparent);
+      animation: scanbeam 7s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scanbeam {
+      0%   { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(0,212,255,0.06);
+      border: 1px solid rgba(0,212,255,0.18);
+      border-radius: 4px;
+      padding: 7px 18px;
+      font-size: 10px; font-weight: 700; letter-spacing: 3px;
+      color: var(--cyan); text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+    .hero-eyebrow .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--cyan); box-shadow: 0 0 10px var(--cyan);
+      animation: livepulse 1.8s ease-in-out infinite;
+    }
+
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 62px; font-weight: 800;
+      line-height: 1.03; letter-spacing: -2.5px;
+      color: var(--white); margin-bottom: 22px;
+    }
+    .hero h1 .gradient-line {
+      display: block;
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 50%, #7BB8FF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 17px; color: var(--gray1);
+      max-width: 580px; margin: 0 auto 22px;
+      line-height: 1.75; font-weight: 400;
+    }
+
+    /* Storage trust strip */
+    .trust-strip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(0,255,136,0.05);
+      border: 1px solid rgba(0,255,136,0.18);
+      border-radius: 4px;
+      padding: 8px 18px;
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      color: var(--green); text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+
+    /* Usage dots */
+    .usage-track {
+      display: inline-flex; align-items: center; gap: 14px;
+      background: rgba(10,15,30,0.8);
+      border: 1px solid var(--border2);
+      border-radius: 30px; padding: 10px 24px;
+      backdrop-filter: blur(12px);
+    }
+    .usage-pips { display: flex; gap: 6px; }
+    .pip {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--border2); transition: all 0.3s;
+    }
+    .pip.used { background: var(--blue);  box-shadow: 0 0 8px var(--blue); }
+    .pip.free { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .usage-text { font-size: 12px; font-weight: 600; color: var(--gray1); }
+    .usage-text a { color: var(--cyan); text-decoration: none; }
+    .usage-text a:hover { text-decoration: underline; }
+
+    /* ── PAGE BODY ── */
+    .page-body { position: relative; z-index: 1; }
+
+    /* ── MAIN CARD ── */
+    .card-wrap {
+      max-width: 720px; margin: 0 auto;
+      padding: 0 20px 48px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px; padding: 42px;
+      position: relative;
+      box-shadow: 0 8px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(43,127,255,0.04);
+    }
+    /* Futuristic corner brackets */
+    .card::before {
+      content: '';
+      position: absolute; top: -1px; left: -1px;
+      width: 28px; height: 28px;
+      border-top: 2px solid var(--cyan);
+      border-left: 2px solid var(--cyan);
+      border-top-left-radius: 22px;
+    }
+    .card::after {
+      content: '';
+      position: absolute; bottom: -1px; right: -1px;
+      width: 28px; height: 28px;
+      border-bottom: 2px solid var(--cyan);
+      border-right: 2px solid var(--cyan);
+      border-bottom-right-radius: 22px;
+    }
+
+    .card-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
+      color: var(--gray2); text-transform: uppercase;
+      margin-bottom: 24px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-label::before {
+      content: '//';
+      color: var(--cyan); font-weight: 800; opacity: 0.7;
+    }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-zone {
+      border: 1px dashed var(--border2);
+      border-radius: 16px; padding: 52px 24px;
+      text-align: center; cursor: pointer;
+      position: relative; transition: all 0.25s;
+      background: rgba(43,127,255,0.025);
+      overflow: hidden;
+    }
+    .upload-zone::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(0,212,255,0.03) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--cyan);
+      border-style: solid;
+      background: var(--cyan-glow);
+      box-shadow: 0 0 40px rgba(0,212,255,0.08), inset 0 0 40px rgba(0,212,255,0.03);
+    }
+    .upload-zone.has-files {
+      border-style: solid; border-color: var(--border);
+      padding: 22px 24px; background: transparent;
+    }
+    .upload-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2;
+    }
+
+    .upload-icon-wrap {
+      width: 76px; height: 76px; border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px; font-size: 32px;
+      box-shadow: 0 0 30px rgba(0,212,255,0.08);
+      position: relative; z-index: 1;
+    }
+    .upload-zone.has-files .upload-icon-wrap { display: none; }
+    .upload-zone.has-files .upload-prompt { display: none; }
+
+    .upload-zone h3 {
+      font-size: 16px; font-weight: 700; color: var(--white);
+      margin-bottom: 8px; position: relative; z-index: 1;
+    }
+    .upload-zone > p {
+      font-size: 13px; color: var(--gray1);
+      margin-bottom: 18px; position: relative; z-index: 1;
+    }
+    .file-chips {
+      display: flex; gap: 6px; justify-content: center;
+      flex-wrap: wrap; position: relative; z-index: 1;
+    }
+    .file-chip {
+      background: var(--surface2); color: var(--gray2);
+      font-size: 9px; font-weight: 700;
+      padding: 4px 10px; border-radius: 4px;
+      border: 1px solid var(--border); letter-spacing: 1px;
+    }
+
+    /* File list */
+    #file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+      transition: border-color 0.2s;
+    }
+    .file-item:hover { border-color: var(--border2); }
+    .file-icon { font-size: 18px; flex-shrink: 0; }
+    .file-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--white); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { font-size: 11px; color: var(--gray2); flex-shrink: 0; }
+    .remove-btn {
+      background: none; border: none; color: var(--gray2); cursor: pointer;
+      font-size: 13px; padding: 0; transition: color 0.15s; flex-shrink: 0;
+      width: 24px; height: 24px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .remove-btn:hover { color: var(--red); background: rgba(255,61,61,0.1); }
+
+    .add-more {
+      margin-top: 12px; text-align: center;
+      font-size: 12px; color: var(--blue); cursor: pointer;
+      font-weight: 600; display: none; letter-spacing: 0.5px;
+    }
+    .add-more:hover { color: var(--cyan); }
+
+    /* Form fields */
+    .form-section { margin-top: 28px; }
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block; font-size: 10px; font-weight: 700;
+      color: var(--gray2); letter-spacing: 1.5px;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 13px 16px;
+      font-size: 14px; font-family: 'Inter', sans-serif;
+      color: var(--white); transition: all 0.2s;
+    }
+    .field input::placeholder, .field textarea::placeholder { color: var(--gray3); }
+    .field input:focus, .field textarea:focus {
+      outline: none; border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(43,127,255,0.12);
+      background: var(--surface);
+    }
+    .field textarea { resize: vertical; min-height: 90px; }
+
+    /* ── VAULT NOTICE (inside card) ── */
+    .vault-notice {
+      margin-top: 22px;
+      background: rgba(0,255,136,0.04);
+      border: 1px solid rgba(0,255,136,0.14);
+      border-radius: 14px; padding: 18px 20px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .vault-notice-icon {
+      width: 38px; height: 38px; flex-shrink: 0;
+      background: rgba(0,255,136,0.07);
+      border: 1px solid rgba(0,255,136,0.18);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+    .vault-notice-text h4 {
+      font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
+      color: var(--green); text-transform: uppercase; margin-bottom: 5px;
+    }
+    .vault-notice-text p {
+      font-size: 12px; color: rgba(110,231,183,0.65); line-height: 1.65;
+    }
+    .vault-notice-text p strong { color: rgba(110,231,183,0.9); font-weight: 600; }
+
+    /* Price notice */
+    .price-notice {
+      margin-top: 20px; border-radius: 12px;
+      padding: 14px 18px;
+      display: flex; align-items: flex-start; gap: 12px;
+      border: 1px solid;
+    }
+    .price-notice.free  { background: rgba(0,255,136,0.04);  border-color: rgba(0,255,136,0.18); }
+    .price-notice.paid  { background: rgba(43,127,255,0.05); border-color: rgba(43,127,255,0.18); }
+    .price-notice.warn  { background: rgba(251,191,36,0.04); border-color: rgba(251,191,36,0.18); }
+    .price-notice .icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+    .price-notice .msg  { font-size: 13px; line-height: 1.6; }
+    .price-notice.free .msg { color: #6EE7B7; }
+    .price-notice.paid .msg { color: #93C5FD; }
+    .price-notice.warn .msg { color: #FCD34D; }
+    .price-notice .msg a { color: inherit; text-decoration: underline; }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-submit {
+      width: 100%; margin-top: 22px; padding: 18px;
+      background: linear-gradient(135deg, #1A5FCC, var(--blue));
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 800; font-family: 'Inter', sans-serif;
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .btn-submit::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 25%, rgba(0,212,255,0.1), transparent 75%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .btn-submit::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,255,0.6), transparent);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .btn-submit:hover {
+      background: linear-gradient(135deg, var(--blue), #4BA0FF);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 50px rgba(43,127,255,0.55), 0 0 0 1px rgba(0,212,255,0.15);
+    }
+    .btn-submit:hover::before, .btn-submit:hover::after { opacity: 1; }
+    .btn-submit:active { transform: translateY(0); }
+
+    /* ── VAULT BANNER (below form) ── */
+    .vault-banner {
+      max-width: 720px; margin: 0 auto 48px;
+      padding: 0 20px;
+    }
+    .vault-banner-inner {
+      background: linear-gradient(135deg, rgba(0,255,136,0.03) 0%, rgba(43,127,255,0.04) 100%);
+      border: 1px solid rgba(0,255,136,0.1);
+      border-radius: 18px; padding: 30px 36px;
+      display: grid; grid-template-columns: 56px 1fr;
+      gap: 20px; align-items: center;
+    }
+    .vault-banner-emoji { font-size: 44px; }
+    .vault-banner-text h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 17px; font-weight: 700;
+      color: var(--green); margin-bottom: 8px;
+    }
+    .vault-banner-text p {
+      font-size: 13px; color: var(--gray1); line-height: 1.7;
+    }
+    .vault-banner-text p strong { color: var(--white); font-weight: 600; }
+
+    /* ── HOW IT WORKS ── */
+    .how-section {
+      max-width: 720px; margin: 0 auto 80px;
+      padding: 0 20px;
+    }
+    .section-label {
+      text-align: center;
+      font-size: 10px; font-weight: 700; letter-spacing: 3px;
+      color: var(--gray2); text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+    .step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px 20px;
+      text-align: center; position: relative; overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .step:hover {
+      border-color: var(--border2);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .step::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.25;
+    }
+    .step-num {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(0,212,255,0.07);
+      border: 1px solid rgba(0,212,255,0.18);
+      color: var(--cyan); font-size: 14px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .step h3 { font-size: 13px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+    .step p  { font-size: 12px; color: var(--gray1); line-height: 1.6; }
+
+    /* ── LOADING OVERLAY ── */
+    #loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(5,7,14,0.97);
+      backdrop-filter: blur(14px);
+      z-index: 1000;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+    }
+    #loading-overlay.active { display: flex; }
+
+    .loading-grid-bg {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(43,127,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(43,127,255,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+    }
+
+    .loading-ring {
+      width: 84px; height: 84px; border-radius: 50%;
+      border: 2px solid var(--border);
+      border-top-color: var(--cyan);
+      border-right-color: var(--blue);
+      animation: spin 0.9s linear infinite;
+      margin-bottom: 32px;
+      box-shadow: 0 0 40px rgba(0,212,255,0.18);
+      position: relative; z-index: 1;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-pulse {
+      display: flex; gap: 8px; margin-bottom: 24px;
+      position: relative; z-index: 1;
+    }
+    .loading-pulse span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--blue);
+      animation: pulse3 1.2s ease-in-out infinite;
+    }
+    .loading-pulse span:nth-child(2) { animation-delay: 0.2s; background: var(--cyan); }
+    .loading-pulse span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse3 {
+      0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+      40%           { transform: scale(1);   opacity: 1; }
+    }
+
+    #loading-overlay h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px; font-weight: 700;
+      color: var(--white); margin-bottom: 12px;
+      position: relative; z-index: 1;
+    }
+    #loading-overlay > p {
+      font-size: 14px; color: var(--gray1);
+      max-width: 380px; line-height: 1.7;
+      position: relative; z-index: 1;
+    }
+
+    .loading-steps {
+      margin-top: 32px; display: flex; flex-direction: column;
+      gap: 10px; align-items: flex-start;
+      position: relative; z-index: 1;
+    }
+    .lstep {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 12px; font-weight: 500;
+      color: var(--gray3); letter-spacing: 0.3px;
+      transition: color 0.4s;
+    }
+    .lstep-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--border2); flex-shrink: 0;
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    .lstep.active { color: var(--gray1); }
+    .lstep.active .lstep-dot {
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+      animation: livepulse 1s ease-in-out infinite;
+    }
+    .lstep.done { color: var(--gray2); }
+    .lstep.done .lstep-dot { background: var(--green); box-shadow: none; }
+
+    /* ── FLASH ── */
+    .flash {
+      max-width: 720px; margin: 16px auto;
+      padding: 14px 22px; border-radius: 10px;
+      font-size: 13px; font-weight: 500; position: relative; z-index: 1;
+    }
+    .flash.error   { background: rgba(255,61,61,0.07);  color: #FC8181; border: 1px solid rgba(255,61,61,0.2); }
+    .flash.success { background: rgba(0,255,136,0.06);  color: #6EE7B7; border: 1px solid rgba(0,255,136,0.2); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px; text-align: center;
+      font-size: 10px; color: var(--gray2);
+      letter-spacing: 1.5px; text-transform: uppercase;
+      position: relative; z-index: 1;
+    }
+    footer strong { color: var(--gray1); font-weight: 700; }
+    footer .sep { margin: 0 12px; opacity: 0.25; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      header { padding: 0 20px; }
+      .hero h1 { font-size: 36px; letter-spacing: -1.5px; }
+      .hero { padding: 64px 16px 52px; }
+      .card { padding: 24px 20px; }
+      .steps { grid-template-columns: 1fr; }
+      .vault-banner-inner { grid-template-columns: 1fr; text-align: center; }
+      .live-badge { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background layers -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow-top"></div>
+  <div class="bg-glow-br"></div>
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo-wrap">
+      <div class="logo">MTN<em>—</em>EST</div>
+      <div class="logo-sub">Powered by MTN-AI</div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div>System Live</div>
+      <div class="pricing-trigger">
+        <button class="pricing-btn" id="pricing-btn" onclick="togglePricing()">
+          Pricing
+        </button>
+        <div class="pricing-panel" id="pricing-panel">
+          <div class="pricing-panel-header">Plans &amp; Pricing</div>
+          <div class="pricing-row">
+            <span class="tier">1st Estimate</span>
+            <span class="price free">FREE</span>
+          </div>
+          <div class="pricing-row">
+            <span class="tier">2nd Estimate</span>
+            <span class="price free">FREE</span>
+          </div>
+          <div class="pricing-row">
+            <span class="tier">3rd Estimate</span>
+            <span class="price">$100</span>
+          </div>
+          <div class="pricing-row">
+            <span class="tier">4th Estimate</span>
+            <span class="price">$250</span>
+          </div>
+          <div class="pricing-row sep">
+            <span class="tier">Basic Membership</span>
+            <span class="price member">/ mo</span>
+          </div>
+          <div class="pricing-row">
+            <span class="tier">Pro Membership</span>
+            <span class="price member">/ mo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-body">
+
+    <!-- ── FLASH MESSAGES ── -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- ── HERO ── -->
+    <div class="hero">
+      <div class="hero-eyebrow"><div class="dot"></div>Powered by MTN-AI</div>
+      <h1>
+        Upload Plans.<br>
+        <span class="gradient-line">Get Priced Out. Fast.</span>
+      </h1>
+      <p class="hero-sub">
+        Drop your architectural plans and MTN-EST prices every scope item against NYC union labor rates — fully itemized, ready to bid, in seconds.
+      </p>
+      <div class="trust-strip">
+        🔒&nbsp;&nbsp;Your files go to YOUR storage — Zero third-party exposure
+      </div>
+      <div class="usage-track">
+        <div class="usage-pips">
+          {% for i in range(4) %}
+            <div class="pip
+              {% if i < use_count %}used
+              {% elif i < uses_remaining_free + use_count %}free
+              {% endif %}
+            "></div>
+          {% endfor %}
+        </div>
+        {% if uses_remaining_free > 0 %}
+          <span class="usage-text">{{ uses_remaining_free }} free estimate{{ 's' if uses_remaining_free != 1 }} remaining</span>
+        {% else %}
+          <span class="usage-text"><a href="/upgrade">Upgrade for unlimited access →</a></span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── FORM ── -->
+    <form method="POST" action="/analyze" enctype="multipart/form-data" id="upload-form">
+      <div class="card-wrap">
+        <div class="card">
+          <div class="card-label">Submit Your Plans</div>
+
+          <!-- Upload zone -->
+          <div class="upload-zone" id="drop-zone">
+            <input type="file" name="plans" id="plan-files" multiple
+                   accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.docx">
+            <div class="upload-prompt">
+              <div class="upload-icon-wrap">📐</div>
+              <h3>Drop your plans here</h3>
+              <p>Click to browse or drag &amp; drop your files</p>
+              <div class="file-chips">
+                <span class="file-chip">PDF</span>
+                <span class="file-chip">PNG</span>
+                <span class="file-chip">JPG</span>
+                <span class="file-chip">DOCX</span>
+                <span class="file-chip">TXT</span>
+              </div>
+            </div>
+            <div id="file-list"></div>
+          </div>
+
+          <div id="add-more" class="add-more"
+               onclick="document.getElementById('plan-files').click()">
+            + Add more files
+          </div>
+
+          <!-- Project details -->
+          <div class="form-section">
+            <div class="field">
+              <label>Project Name</label>
+              <input type="text" name="project_name"
+                     placeholder="e.g. 44th Floor TI – 1 Penn Plaza">
+            </div>
+            <div class="field">
+              <label>Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray3)">(optional)</span></label>
+              <textarea name="notes"
+                        placeholder="e.g. Union labor only. Occupied building — weekend work required. Include 10% attic stock..."></textarea>
+            </div>
+          </div>
+
+          <!-- Vault notice -->
+          <div class="vault-notice">
+            <div class="vault-notice-icon">🔐</div>
+            <div class="vault-notice-text">
+              <h4>Your Files. Your Vault.</h4>
+              <p>All uploaded files are processed and stored in <strong>your own system only</strong> — not shared, not held on third-party servers. Your estimates are yours. Always.</p>
+            </div>
+          </div>
+
+          <!-- Pricing state -->
+          {% if uses_remaining_free > 0 %}
+            <div class="price-notice free">
+              <div class="icon">✓</div>
+              <div class="msg"><strong>This estimate is free.</strong> You have {{ uses_remaining_free }} free use{{ 's' if uses_remaining_free != 1 }} remaining.</div>
+            </div>
+          {% elif price == 100 %}
+            <div class="price-notice paid">
+              <div class="icon">💳</div>
+              <div class="msg"><strong>$100 for this estimate.</strong> You've used your 2 free estimates. <a href="/upgrade">View membership →</a></div>
+            </div>
+          {% elif price == 250 %}
+            <div class="price-notice paid">
+              <div class="icon">💳</div>
+              <div class="msg"><strong>$250 for this estimate.</strong> Consider a <a href="/upgrade">membership plan</a> for better rates.</div>
+            </div>
+          {% else %}
+            <div class="price-notice warn">
+              <div class="icon">🔒</div>
+              <div class="msg"><strong>Membership required.</strong> You've exceeded pay-per-use. <a href="/upgrade">Choose a plan to continue.</a></div>
+            </div>
+          {% endif %}
+
+          <button type="submit" class="btn-submit" id="submit-btn">
+            ⚡&nbsp;&nbsp;Generate My Estimate
+          </button>
+
+        </div><!-- /card -->
+      </div><!-- /card-wrap -->
+    </form>
+
+    <!-- ── VAULT BANNER ── -->
+    <div class="vault-banner">
+      <div class="vault-banner-inner">
+        <div class="vault-banner-emoji">🏗️</div>
+        <div class="vault-banner-text">
+          <h3>Own Every Estimate. Own Every Number.</h3>
+          <p>
+            MTN-AI reads your plans, prices your entire scope, and delivers a
+            <strong>fully itemized Excel estimate</strong> straight to your system.
+            No middlemen. No black boxes. Your data flows into
+            <strong>your own storage</strong> — always. You're in control.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HOW IT WORKS ── -->
+    <div class="how-section">
+      <div class="section-label">How it works</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Upload Your Plans</h3>
+          <p>Drop in any plan documents — architectural, structural, MEP, specs. Any format.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>MTN-AI Reads &amp; Prices</h3>
+          <p>AI prices every scope item against NYC union labor rates across all CSI divisions.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Download &amp; Bid</h3>
+          <p>Get a full Excel estimate — summary, line items, scope of work — ready to submit.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-body -->
+
+  <!-- ── LOADING OVERLAY ── -->
+  <div id="loading-overlay">
+    <div class="loading-grid-bg"></div>
+    <div class="loading-pulse"><span></span><span></span><span></span></div>
+    <div class="loading-ring"></div>
+    <h2>Analyzing Your Plans…</h2>
+    <p>MTN-AI is reading your documents and pricing every line item. Usually 30–60 seconds.</p>
+    <div class="loading-steps">
+      <div class="lstep active" id="lstep-1">
+        <div class="lstep-dot"></div>Reading plan documents…
+      </div>
+      <div class="lstep" id="lstep-2">
+        <div class="lstep-dot"></div>Identifying all scope items…
+      </div>
+      <div class="lstep" id="lstep-3">
+        <div class="lstep-dot"></div>Pricing against NYC union labor rates…
+      </div>
+      <div class="lstep" id="lstep-4">
+        <div class="lstep-dot"></div>Generating your Excel estimate…
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <strong>MTN-EST</strong>
+    <span class="sep">|</span>
+    Powered by MTN-AI
+    <span class="sep">|</span>
+    NYC Union Labor Rates
+    <span class="sep">|</span>
+    Your Data. Your Vault.
+  </footer>
+
+  <script>
+    // ── Pricing popover ──
+    function togglePricing() {
+      document.getElementById('pricing-panel').classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+      const trigger = document.querySelector('.pricing-trigger');
+      if (trigger && !trigger.contains(e.target)) {
+        document.getElementById('pricing-panel').classList.remove('open');
+      }
+    });
+
+    // ── File handling ──
+    const dropZone  = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('plan-files');
+    const fileList  = document.getElementById('file-list');
+    const addMore   = document.getElementById('add-more');
+    const form      = document.getElementById('upload-form');
+    const overlay   = document.getElementById('loading-overlay');
+    let selectedFiles = [];
+
+    function formatBytes(b) {
+      if (b < 1024)       return b + ' B';
+      if (b < 1048576)    return (b/1024).toFixed(1) + ' KB';
+      return (b/1048576).toFixed(1) + ' MB';
+    }
+    function fileIcon(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      return { pdf:'📄', png:'🖼️', jpg:'🖼️', jpeg:'🖼️', docx:'📝', txt:'📋' }[ext] || '📁';
+    }
+
+    function renderFileList() {
+      fileList.innerHTML = '';
+      if (selectedFiles.length > 0) {
+        dropZone.classList.add('has-files');
+        addMore.style.display = 'block';
+      } else {
+        dropZone.classList.remove('has-files');
+        addMore.style.display = 'none';
+      }
+      selectedFiles.forEach((f, i) => {
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.innerHTML = `
+          <span class="file-icon">${fileIcon(f.name)}</span>
+          <span class="file-name">${f.name}</span>
+          <span class="file-size">${formatBytes(f.size)}</span>
+          <button type="button" class="remove-btn" data-idx="${i}" title="Remove">✕</button>`;
+        fileList.appendChild(div);
+      });
+      fileList.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          selectedFiles.splice(parseInt(btn.dataset.idx), 1);
+          renderFileList();
+          syncFileInput();
+        });
+      });
+    }
+
+    function syncFileInput() {
+      const dt = new DataTransfer();
+      selectedFiles.forEach(f => dt.items.add(f));
+      fileInput.files = dt.files;
+    }
+
+    fileInput.addEventListener('change', () => {
+      Array.from(fileInput.files).forEach(f => {
+        if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+      });
+      renderFileList();
+    });
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      Array.from(e.dataTransfer.files).forEach(f => {
+        if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+      });
+      renderFileList();
+      syncFileInput();
+    });
+
+    // ── Loading overlay with animated status steps ──
+    const lsteps = ['lstep-1','lstep-2','lstep-3','lstep-4'];
+    let lIdx = 0;
+
+    function advanceLStep() {
+      if (lIdx < lsteps.length) {
+        if (lIdx > 0) {
+          const prev = document.getElementById(lsteps[lIdx - 1]);
+          prev.classList.remove('active');
+          prev.classList.add('done');
+        }
+        document.getElementById(lsteps[lIdx]).classList.add('active');
+        lIdx++;
+        if (lIdx < lsteps.length) setTimeout(advanceLStep, 14000);
+      }
+    }
+
+    form.addEventListener('submit', () => {
+      overlay.classList.add('active');
+      setTimeout(advanceLStep, 3000);
+    });
+  </script>
+</body>
+</html>
